@@ -749,9 +749,9 @@ public class StringUtils
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include=""xunit.v3.mtp-v2"" Version=""3.2.2"" />
-    <PackageReference Include=""Microsoft.Testing.Platform"" Version=""2.2.1"" />
+    <PackageReference Include=""Microsoft.Testing.Platform"" Version=""2.2.2"" />
     <PackageReference Include=""coverlet.MTP"" Version=""{coverletMtpVersion}"" />
-    <PackageReference Include=""Microsoft.Testing.Extensions.TrxReport"" Version=""2.2.1"" />
+    <PackageReference Include=""Microsoft.Testing.Extensions.TrxReport"" Version=""2.2.2"" />
   </ItemGroup>
   <!-- Configuration file must be copied to output directory per documentation -->
   <ItemGroup>
@@ -995,9 +995,9 @@ public class StringUtilsTests
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include=""xunit.v3.mtp-v2"" Version=""3.2.2"" />
-    <PackageReference Include=""Microsoft.Testing.Platform"" Version=""2.2.1"" />
+    <PackageReference Include=""Microsoft.Testing.Platform"" Version=""2.2.2"" />
     <PackageReference Include=""coverlet.MTP"" Version=""{coverletMtpVersion}"" />
-    <PackageReference Include=""Microsoft.Testing.Extensions.TrxReport"" Version=""2.2.1"" />
+    <PackageReference Include=""Microsoft.Testing.Extensions.TrxReport"" Version=""2.2.2"" />
   </ItemGroup>
   <!-- testconfig.json must be copied to output directory -->
   <ItemGroup>
@@ -1050,9 +1050,9 @@ public class StringUtilsTests
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include=""xunit.v3.mtp-v2"" Version=""3.2.2"" />
-    <PackageReference Include=""Microsoft.Testing.Platform"" Version=""2.2.1"" />
+    <PackageReference Include=""Microsoft.Testing.Platform"" Version=""2.2.2"" />
     <PackageReference Include=""coverlet.MTP"" Version=""{coverletMtpVersion}"" />
-    <PackageReference Include=""Microsoft.Testing.Extensions.TrxReport"" Version=""2.2.1"" />
+    <PackageReference Include=""Microsoft.Testing.Extensions.TrxReport"" Version=""2.2.2"" />
   </ItemGroup>
   <!-- Both config files must be copied to output directory -->
   <ItemGroup>
@@ -1109,9 +1109,9 @@ public class StringUtilsTests
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include=""xunit.v3.mtp-v2"" Version=""3.2.2"" />
-    <PackageReference Include=""Microsoft.Testing.Platform"" Version=""2.2.1"" />
+    <PackageReference Include=""Microsoft.Testing.Platform"" Version=""2.2.2"" />
     <PackageReference Include=""coverlet.MTP"" Version=""{coverletMtpVersion}"" />
-    <PackageReference Include=""Microsoft.Testing.Extensions.TrxReport"" Version=""2.2.1"" />
+    <PackageReference Include=""Microsoft.Testing.Extensions.TrxReport"" Version=""2.2.2"" />
   </ItemGroup>
   <!-- Both app-specific and generic testconfig.json must be copied -->
   <ItemGroup>
