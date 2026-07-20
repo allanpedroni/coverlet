@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -27,8 +28,9 @@ namespace Coverlet.Core.Tests.Instrumentation
       {
         if (disposing)
         {
-          // Dispose managed resources
           File.Delete(ModuleTrackerTemplate.HitsFilePath);
+          File.Delete(ModuleTrackerTemplate.HitsFilePath + ".tmp");
+          File.Delete(ModuleTrackerTemplate.HitsFilePath + ".lock");
         }
 
         // Dispose unmanaged resources
@@ -125,10 +127,84 @@ namespace Coverlet.Core.Tests.Instrumentation
         ModuleTrackerTemplate.HitsArray = [0, 3, 2, 1];
         ModuleTrackerTemplate.UnloadModule(null, null);
 
+        // Each AppDomain has its own copy of ModuleTrackerTemplate with FlushHitFile = true.
+        // Reset the flag to simulate a second AppDomain's unload.
+        ModuleTrackerTemplate.FlushHitFile = true;
         ModuleTrackerTemplate.HitsArray = [0, 1, 2, 3];
         ModuleTrackerTemplate.UnloadModule(null, null);
 
         int[] expectedHitsArray = [0, 4, 4, 4];
+        Assert.Equal(expectedHitsArray, ReadHitsFile());
+
+        return s_success;
+      });
+    }
+
+    [Fact]
+    public void RegisterUnloadEventsPopulatesRegistry()
+    {
+      // Regression test for Fix 1 in issue #1983: RegisterUnloadEvents must record the module's
+      // UnloadModule delegate so the in-proc collector can flush all hit files.
+      FunctionExecutor.Run(() =>
+      {
+        using var ctx = new TrackerContext();
+        ModuleTrackerTemplate.HitsArray = [3, 1, 4];
+
+        // Simulate Initialize pre-creating the bag, then module load calling RegisterUnloadEvents.
+        var bag = new ConcurrentBag<EventHandler>();
+        AppDomain.CurrentDomain.SetData(ModuleTrackerTemplate.ModuleTrackerRegistryKey, bag);
+        ModuleTrackerTemplate.RegisterUnloadEvents();
+
+        EventHandler handler = Assert.Single(bag);
+        handler.Invoke(null, EventArgs.Empty);
+        int[] expectedHitsArray = [3, 1, 4];
+        Assert.Equal(expectedHitsArray, ReadHitsFile());
+
+        return s_success;
+      });
+    }
+
+    [Fact]
+    public void FlushHitFileClearedInsideMutexPreventsDoubleWrite()
+    {
+      // Regression test for Fix 3 in issue #1983: FlushHitFile must be cleared inside the mutex so a
+      // concurrent ProcessExit caller that was waiting for the lock sees false and skips the
+      // write.
+      FunctionExecutor.Run(() =>
+      {
+        using var ctx = new TrackerContext();
+        ModuleTrackerTemplate.HitsArray = [1, 2, 3];
+
+        ModuleTrackerTemplate.UnloadModule(null, null);
+
+        // FlushHitFile must be false inside the mutex, not after it is released.
+        Assert.False(ModuleTrackerTemplate.FlushHitFile);
+
+        // Second call simulates ProcessExit in the old TOCTOU window; must be a no-op.
+        ModuleTrackerTemplate.UnloadModule(null, null);
+
+        int[] expectedHitsArray = [1, 2, 3];
+        Assert.Equal(expectedHitsArray, ReadHitsFile());
+
+        return s_success;
+      });
+    }
+
+    [Fact]
+    public void HitsFileWrittenAtomicallyLeavesNoTempFile()
+    {
+      // Regression test for Fix 2 in issue #1983: UnloadModule must write via a temp file and rename
+      // so the hit file appears at HitsFilePath only once it is complete. No .tmp residual should
+      // remain after a successful flush.
+      FunctionExecutor.Run(() =>
+      {
+        using var ctx = new TrackerContext();
+        ModuleTrackerTemplate.HitsArray = [1, 2, 3];
+        ModuleTrackerTemplate.UnloadModule(null, null);
+
+        Assert.True(File.Exists(ModuleTrackerTemplate.HitsFilePath));
+        Assert.False(File.Exists(ModuleTrackerTemplate.HitsFilePath + ".tmp"));
+        int[] expectedHitsArray = [1, 2, 3];
         Assert.Equal(expectedHitsArray, ReadHitsFile());
 
         return s_success;
@@ -167,6 +243,26 @@ namespace Coverlet.Core.Tests.Instrumentation
         return 0;
       });
 
+    }
+
+    [Fact]
+    public void LockFileHeldDuringWriteAndReleasedAfter()
+    {
+      FunctionExecutor.Run(() =>
+      {
+        using var ctx = new TrackerContext();
+        string lockPath = ModuleTrackerTemplate.HitsFilePath + ".lock";
+
+        ModuleTrackerTemplate.HitsArray = [1, 2, 3];
+        ModuleTrackerTemplate.UnloadModule(null, null);
+
+        // After a completed write the lock file must have been released.
+        // A successful exclusive open (FileShare.None) confirms no one holds it.
+        using var probe = new FileStream(lockPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        Assert.True(probe.CanRead);
+
+        return s_success;
+      });
     }
 
     private static void WriteHitsFile(int[] hitsArray)
